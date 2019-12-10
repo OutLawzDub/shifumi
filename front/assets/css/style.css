@@ -1,3 +1,63 @@
+/* import fonts */
+
+@font-face {
+	font-family: "Game";
+	src: url('../fonts/game.ttf');
+}
+
+@font-face {
+	font-family: "Retro";
+	src: url('../fonts/Retro\ Gaming.ttf');
+}
+
+/* front css */
+
 body {
     margin: 0;
+    background: rgb(35, 39, 65);
+    overflow: hidden;
+}
+
+.bloc {
+    position: absolute;
+    top: 0; bottom: 0;
+    left: 0; right: 0;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-family: Game;
+    text-shadow: 5px 5px 5px rgba(0, 0, 0, .20);
+    color: rgba(255, 255, 255, .85);
+}
+
+.hidden {
+    display: none;
+}
+
+h1 {
+    text-align: center;
+}
+
+.delay {
+    position: absolute;
+    top: 5px;
+    left: 0; right: 0;
+    margin: auto;
+    height: 50px;
+    text-align: center;
+    z-index: 10;
+    color: rgba(255, 255, 255, .75);
+    font-family: Retro;
+    font-size: 1.4em;
+}
+
+.blink {
+    text-decoration: blink;
+}
+
+#particles-js {
+    position: absolute;
+    left: 0; right: 0;
+    top: 0; bottom: 0;
+    opacity: 0.5;
 }
