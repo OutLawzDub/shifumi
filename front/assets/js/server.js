@@ -7,12 +7,132 @@ function debug()
     socket.emit('debug', true);
 }
 
+function resetGame()
+{
+    $('.space > .left').css('background', 'grey').html('');
+    $('.space > .right').css('background', 'grey').html('');
+
+    showElement($('.choices'));
+}
 
 // End Functions
 
 socket.on('ready', function(message) {
     hideElement($('.wait'));
 });
+
+socket.on('user_left', function(message) {
+    hideElement();
+    showElement($('.left'));
+});
+
+socket.on('draw', function() {
+    showElement($('.resultats'));
+    hideElement($('.choices'));
+
+    $('.resultats').html('C\'EST UNE EGALITE, DOMMAGE !')
+
+    setTimeout(() => {
+        window.location.reload();
+        socket.disconnect();
+    }, 3000);
+});
+
+socket.on('win', function() {
+    showElement($('.resultats'));
+    hideElement($('.choices'));
+    
+    $('.resultats').html('C\'EST UNE VICTOIRE, FELICITATIONS !')
+});
+
+socket.on('lose', function() {
+    showElement($('.resultats'));
+    hideElement($('.choices'));
+    
+    $('.resultats').html('C\'EST UNE DEFAITE, DOMMAGE !');
+
+    setTimeout(() => {
+        window.location.reload();
+        socket.disconnect();
+    }, 3000);
+});
+
+socket.on('terminus', function(choices) {
+
+    let player1 = choices.player1;
+    let player2 = choices.player2;
+
+    let choose1 = choices.choose1;
+    let choose2 = choices.choose2;
+
+    if(player1 === socket.id)
+    {
+        switch (choose1) {
+            case "pierre":
+                $('.space > .left').html('✊').css('background', '#e74c3c');
+                break;
+            case "feuille":
+                $('.space > .left').html('✋').css('background', '#2ecc71');
+                break;
+            case "ciseaux":
+                $('.space > .left').html('✌').css('background', '#2980b9');
+                break;
+        }
+
+        switch (choose2) {
+            case "pierre":
+                $('.space > .right').html('✊').css('background', '#e74c3c');
+                break;
+            case "feuille":
+                $('.space > .right').html('✋').css('background', '#2ecc71');
+                break;
+            case "ciseaux":
+                $('.space > .right').html('✌').css('background', '#2980b9');
+                break;
+        }
+    }
+    
+    if(player2 === socket.id)
+    {
+        switch (choose2) {
+            case "pierre":
+                $('.space > .left').html('✊').css('background', '#e74c3c');
+                break;
+            case "feuille":
+                $('.space > .left').html('✋').css('background', '#2ecc71');
+                break;
+            case "ciseaux":
+                $('.space > .left').html('✌').css('background', '#2980b9');
+                break;
+        }
+
+        switch (choose1) {
+            case "pierre":
+                $('.space > .right').html('✊').css('background', '#e74c3c');
+                break;
+            case "feuille":
+                $('.space > .right').html('✋').css('background', '#2ecc71');
+                break;
+            case "ciseaux":
+                $('.space > .right').html('✌').css('background', '#2980b9');
+                break;
+        }
+    }
+})
+
+socket.on('nb_players', function(nb) {
+    if(nb > 0)
+    {
+        showElement($('.count'));
+
+        $('.count > .nb').html(nb);
+    }
+    else
+    {
+        hideElement($('.count'));
+    }
+    
+})
 
 socket.on('game_started', function(message) {
     hideElement();
@@ -26,6 +146,21 @@ socket.on('game_started', function(message) {
 
     typewriter.typeString('Une partie est en cours...')
         .start()
+});
+
+socket.on('timer_choose', function(timer) {
+    var left = msToTime(timer, true);
+
+    showElement($('.timer-choose'));
+
+    $('.timer-choose > strong').html(left);
+});
+
+socket.on('hide_timer_choose', function() {
+
+    socket.emit('choice', choix);
+
+    hideElement($('.timer-choose'));
 });
 
 socket.on('game_waiting', function(message) {
@@ -73,5 +208,15 @@ socket.on('start', function(message) {
     hideElement();
     showElement($('.game'));
     hideElement($('.delay'));
+
+    var app = document.getElementById('texte');
+
+    var typewriter = new Typewriter(app, {
+        loop: false
+    });
+
+    typewriter.typeString('Faites votre choix...')
+        .start()
+    
     console.log(message);
 });
