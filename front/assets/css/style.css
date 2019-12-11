@@ -1,0 +1,196 @@
+/* import fonts */
+
+@font-face {
+	font-family: "Game";
+	src: url('../fonts/game.ttf');
+}
+
+@font-face {
+	font-family: "Retro";
+	src: url('../fonts/Retro\ Gaming.ttf');
+}
+
+/* front css */
+
+body {
+    margin: 0;
+    background: rgb(35, 39, 65);
+    overflow: hidden;
+}
+
+.bloc {
+    position: absolute;
+    top: 0; bottom: 0;
+    left: 0; right: 0;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-family: Game;
+    text-shadow: 5px 5px 5px rgba(0, 0, 0, .20);
+    color: rgba(255, 255, 255, .85);
+}
+
+.bloc-rotate {
+    position: absolute;
+    top: 0; bottom: 0;
+    left: 0; right: 0;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-family: Game;
+    text-shadow: 5px 5px 5px rgba(0, 0, 0, .20);
+    color: rgba(255, 255, 255, .85);
+}
+
+
+.hidden {
+    display: none;
+}
+
+h1 {
+    text-align: center;
+}
+
+.delay {
+    position: absolute;
+    top: 5px;
+    left: 0; right: 0;
+    margin: auto;
+    height: 50px;
+    text-align: center;
+    z-index: 10;
+    color: rgba(255, 255, 255, .75);
+    font-family: Retro;
+    font-size: 1.4em;
+}
+
+.blink {
+    text-decoration: blink;
+}
+
+#particles-js {
+    position: absolute;
+    left: 0; right: 0;
+    top: 0; bottom: 0;
+    opacity: 0.5;
+}
+
+/* .game */
+
+.game {
+    width: 90vw !important;
+    height: 90vh !important;
+    margin: auto;
+}
+
+/* .game .space */
+
+.game > .space {
+    position: absolute;
+    top: 0; bottom: 0;
+    left: 0; right: 0;
+    margin: auto;
+    text-align: center;
+    line-height: 40vh;
+    height: 40vh;
+}
+
+.game > .space > .timer-choose {
+    position: absolute;
+    top: 0;
+    left: 0; right: 0;
+    height: 50px;
+    line-height: 50px;
+}
+
+.game > .space > .resultats {
+    position: absolute;
+    top: 0;
+    left: 0; right: 0;
+    height: 50px;
+    line-height: 50px;
+}
+
+.game > .space > .left {
+    position: absolute;
+    left: 0;
+    top: 0; bottom: 0;
+    margin: auto;
+    font-size: 3em;
+    line-height: calc(35vh / 2);
+    height: calc(35vh / 2);
+    width: calc(35vh / 2);
+    border: 2.5px solid white;
+    background: grey;
+}
+
+.game > .space > .right {
+    position: absolute;
+    right: 0;
+    top: 0; bottom: 0;
+    margin: auto;
+    font-size: 3em;
+    line-height: calc(35vh / 2);
+    height: calc(35vh / 2);
+    width: calc(35vh / 2);
+    background: grey;
+    border: 2.5px solid white;
+}
+
+/*  */
+
+.game > #texte {
+    position: absolute;
+    top: 0;
+    left: 0; right: 0;
+    padding: 10px;
+    font-size: 2em;
+    text-align: center;
+}
+
+ul {
+    margin: 0;
+    padding: 0;
+}
+
+ul.choices {
+    position: absolute;
+    bottom: 0;
+    left: 0; right: 0;
+    text-align: center;
+}
+
+ul.choices > li {
+    position: relative;
+    display: inline-block;
+    width: calc(calc(80vw / 3) - 30px);
+    height: calc(calc(80vw / 3) - 30px);
+    line-height: calc(calc(80vw / 3) - 50px);
+    font-size: calc(calc(50vw / 3) - 25px);
+    margin-left: 10px;
+    margin-right: 10px;
+    border: 2.5px solid white;
+}
+
+
+/* .rotate */
+
+.rotate {
+    background: rgb(35, 39, 65);
+    z-index: 50000;
+}
+
+/* count */
+
+.count {
+    position: absolute;
+    top: 10px; right: 10px;
+    padding: 5px;
+    color: rgba(255, 255, 255, .75);
+    font-family: Retro;
+}
+
+.count > .nb {
+    position: relative;
+    display: inline-block;
+}
