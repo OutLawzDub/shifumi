@@ -11,9 +11,9 @@ var io      = require('socket.io').listen(server);
  * 2 = started
  */
 
-var game = {
+const gameInfo = {
     etat: 0,
-    players: 0
+    winner: false
 };
 
 /**
@@ -24,10 +24,10 @@ var game = {
  * timeToCHoose : delay for user choosing rock paper or cissors
  */
 
-var configuration = {
-    timeBeforePlaying: 5000,
+const configuration = {
+    timeBeforePlaying: 10000,
     timeToChoose: 5000,
-    limitUser: 50
+    limitUser: 4
 };
 
 // Functions
@@ -48,7 +48,7 @@ function startTimer()
     }, 1000);
 
     setTimeout(() => {
-        game.etat = 2;
+        gameInfo.etat = 2;
         startChecker();
     }, configuration.timeBeforePlaying);
 }
@@ -74,7 +74,7 @@ var intervalChecker;
 
 function startChecker()
 {
-    intervalChecker = setInterval(() => {
+    intervalChecker = setInterval(function() {
 
         io.emit('nb_players', players.length);
 
@@ -122,7 +122,7 @@ function startChecker()
                             finish: false
                         };
 
-                        // On connecte les deux participants à la même socket.
+                        // On connecte les deux participants à la même session.
 
                         joueur.socket.join(random);
                         notPlaying[i].socket.join(random);
@@ -136,14 +136,48 @@ function startChecker()
                     {
                         if(players.length == 1)
                         {
-                            console.log('solo winner');
+                            let joueur = players[0];
+
+                            players = [];
+
+                            gameInfo.winner = joueur;
+
+                            io.to(joueur.id).emit('winner', true);
                         }
                         else
                         {
                             let playing = players.filter(elem => elem.playing === true && elem.level === level);
 
                             if(playing.length === (players.length - 1))
-                            {
+                            {  
+                                notPlaying[i].playing = true;
+
+                                let player2 = notPlaying[i];
+
+                                let actual = new Date();
+                                    actual = actual.getTime();
+
+                                let random = getRandomInt(999999);
+
+                                var game = {
+                                    start: actual,
+                                    player1: 'ia',
+                                    player2: player2,
+                                    choose1: false,
+                                    choose2: false,
+                                    session: random,
+                                    winner: false,
+                                    finish: false
+                                };
+
+                                // On connecte les deux participants à la même session.
+
+                                notPlaying[i].socket.join(random);
+
+                                games.push(game);
+
+                                io.to(player2.id).emit('start', {game: true});
+
                                 console.log('just solo ok for ia');
                             }
                             else
@@ -153,6 +187,13 @@ function startChecker()
                         }
                     }
                 }
+            }
+        }
+        else
+        {
+            if(gameInfo.winner === false)
+            {
+                console.log('full draw');
             }
         }
 
@@ -171,12 +212,19 @@ function startChecker()
                 const choose1 = element.choose1;
                 const choose2 = element.choose2;
                 const session = element.session;
+                const finish  = element.finish;
 
                 let checkPlayer1 = players.findIndex(elem => elem.id === player1.id);
                 let checkPlayer2 = players.findIndex(elem => elem.id === player2.id);
 
-                if(checkPlayer1 !== -1 && checkPlayer2 !== -1)
+                if((checkPlayer1 !== -1 && checkPlayer2 !== -1) || (checkPlayer2 !== -1 && player1 == 'ia'))
                 {
+
+                    if (checkPlayer2 !== -1 && player1 == 'ia')
+                    {
+                        console.log(gamesUp[i]);
+                    }
+
                     // Check time left
 
                     let dateNow = new Date();
@@ -253,38 +301,121 @@ function startChecker()
                                 }
                             }
 
-                            if(winner === false)
+                            if(checkPlayer2 !== -1 && player1 == 'ia')
                             {
-                                io.to(session).emit('draw', true);
-                            }
-                            else
-                            {
-                                io.to(winner.id).emit('win', true);
-                                io.to(loser.id).emit('lose', true);
-                            }
-
-                            setTimeout(() => {
-                                io.to(winner.id).emit('game_waiting', true);
-                            }, 3000);
-
-                            setTimeout(() => {
                                 let thisGame = games.findIndex(elem => elem.session === session);
 
                                 games[thisGame].finish = true;
-                                games[thisGame].winner = winner.id;
 
-                                let getPlayer = players.findIndex(elem => elem.id === winner.id);
-
-                                if(getPlayer !== -1)
+                                if(winner === false)
                                 {
-                                    players[getPlayer].playing = false;
-                                    players[getPlayer].level   = (players[getPlayer].level + 1);
+                                    io.to(session).emit('draw', true);
+
+                                    let findPlayer2 = players.findIndex(elem => elem.id === player2.id);
+
+                                    setTimeout(() => {
+                                        io.to(player2.id).emit('next_game');
+                                    }, 3000);
+
+                                    players.splice(findPlayer2, 1);
                                 }
-                            }, 5000);
+                                else if(winner === 'ia')
+                                {
+                                    setTimeout(() => {
+                                        io.to(loser.id).emit('next_game');
+                                    }, 3000);
+
+                                    let findLoser = players.findIndex(elem => elem.id === loser.id);
+
+                                    players.splice(findLoser, 1);
+
+                                    io.to(loser.id).emit('lose', true);
+                                }
+                                else if(winner === player2)
+                                {
+                                    setTimeout(() => {
+                                        io.to(winner.id).emit('game_waiting');
+                                    }, 3000);
+
+                                    setTimeout(() => {
+                                        io.to(winner.id).emit('reset_game', true);
+
+                                        let findWinner = players.findIndex(elem => elem.id === winner.id);
+
+                                        players[findWinner].level   = (players[findWinner].level + 1);
+                                        players[findWinner].playing = false;
+                                    }, 5000);
+
+                                    io.to(winner.id).emit('win', true);
+                                }
+                            }
+                            else
+                            {
+                                let thisGame = games.findIndex(elem => elem.session === session);
+
+                                games[thisGame].finish = true;
+
+                                if(winner === false)
+                                {
+                                    io.to(session).emit('draw', true);
+
+                                    let findPlayer1 = players.findIndex(elem => elem.id === player1.id);
+                                    let findPlayer2 = players.findIndex(elem => elem.id === player2.id);
+
+                                    setTimeout(() => {
+                                        io.to(player1.id).emit('next_game');
+                                        io.to(player2.id).emit('next_game');
+                                    }, 3000);
+
+                                    players.splice(findPlayer1, 1);
+                                    players.splice(findPlayer2, 1);
+
+                                }
+                                else
+                                {
+                                    setTimeout(() => {
+                                        io.to(winner.id).emit('game_waiting');
+                                        io.to(loser.id).emit('next_game');
+                                    }, 3000);
+
+                                    setTimeout(() => {
+                                        io.to(winner.id).emit('reset_game', true);
+
+                                        let findWinner = players.findIndex(elem => elem.id === winner.id);
+
+                                        players[findWinner].level   = (players[findWinner].level + 1);
+                                        players[findWinner].playing = false;
+                                    }, 5000);
+
+                                    let findLoser = players.findIndex(elem => elem.id === loser.id);
+
+                                    players.splice(findLoser, 1);
+
+                                    io.to(winner.id).emit('win', true);
+                                    io.to(loser.id).emit('lose', true);
+                                }
+                            }
                         }
                         else
                         {
-                            io.to(session).emit('hide_timer_choose', true);
+                            if(checkPlayer2 !== -1 && player1 == 'ia')
+                            {
+                                if(choose1 === false && choose2 !== false)
+                                {
+                                    let randomChoix = ['pierre', 'feuille', 'ciseaux']
+                                    let actualGame  = games.findIndex(elem => elem.session === session);
+
+                                    games[actualGame].choose1 = randomChoix[getRandomInt(randomChoix.length)];
+                                }
+                                else
+                                {
+                                    io.to(session).emit('hide_timer_choose', true);
+                                }
+                            }
+                            else
+                            {
+                                io.to(session).emit('hide_timer_choose', true);
+                            }
                         }
                     }
                     
@@ -297,9 +428,11 @@ function startChecker()
 
                     if(checkPlayer1 === -1)
                     {
-                        players[checkPlayer2].socket.emit('user_left', true);
-
-                        games[thisGame].winner = players[checkPlayer2].id;
+                        if(players[checkPlayer2])
+                        {
+                            players[checkPlayer2].socket.emit('user_left', true);
+                            games[thisGame].winner = players[checkPlayer2].id;
+                        }
 
                         setTimeout(() => {
                             if(players[checkPlayer2])
@@ -312,10 +445,12 @@ function startChecker()
 
                     if(checkPlayer2 === -1)
                     {
-                        players[checkPlayer1].socket.emit('user_left', true);
+                        if(players[checkPlayer1])
+                        {
+                            players[checkPlayer1].socket.emit('user_left', true);
+                            games[thisGame].winner = players[checkPlayer1].id;
+                        }
 
-                        games[thisGame].winner = players[checkPlayer1].id;
-                        
                         setTimeout(() => {
                             if(players[checkPlayer1])
                             {
@@ -345,9 +480,9 @@ io.sockets.on('connection', function (socket) {
 
     if(!max)
     {
-        switch (game.etat) {
+        switch (gameInfo.etat) {
             case 0:
-                game.etat = 1;
+                gameInfo.etat = 1;
                 startTimer();
                 addPlayer(socket.id, socket);
                 socket.emit('game_waiting', {waiting: true});
@@ -365,7 +500,7 @@ io.sockets.on('connection', function (socket) {
     
         socket.on('debug', function(message) {
             console.log(players);
-            // console.log(games);
+            console.log(games);
         })
 
         socket.on('choice', function(choix) {

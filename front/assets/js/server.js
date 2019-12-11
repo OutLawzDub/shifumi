@@ -13,6 +13,7 @@ function resetGame()
     $('.space > .right').css('background', 'grey').html('');
 
     showElement($('.choices'));
+    hideElement($('.resultats'));
 }
 
 // End Functions
@@ -31,11 +32,6 @@ socket.on('draw', function() {
     hideElement($('.choices'));
 
     $('.resultats').html('C\'EST UNE EGALITE, DOMMAGE !')
-
-    setTimeout(() => {
-        window.location.reload();
-        socket.disconnect();
-    }, 3000);
 });
 
 socket.on('win', function() {
@@ -50,11 +46,6 @@ socket.on('lose', function() {
     hideElement($('.choices'));
     
     $('.resultats').html('C\'EST UNE DEFAITE, DOMMAGE !');
-
-    setTimeout(() => {
-        window.location.reload();
-        socket.disconnect();
-    }, 3000);
 });
 
 socket.on('terminus', function(choices) {
@@ -134,6 +125,42 @@ socket.on('nb_players', function(nb) {
     
 })
 
+socket.on('reset_game', function() {
+    resetGame();
+})
+
+socket.on('winner', function() {
+    hideElement();
+    showElement($('.winner'));
+
+    var app = document.getElementById('winner');
+
+    var typewriter = new Typewriter(app, {
+        loop: false
+    });
+
+    typewriter.typeString('Vous etes le grand gagnant !')
+        .start()
+})
+
+
+socket.on('next_game', function(message) {
+    hideElement();
+    showElement($('.next-game'));
+
+    var app = document.getElementById('next');
+
+    var typewriter = new Typewriter(app, {
+        loop: false
+    });
+
+    typewriter.typeString('Perdu...')
+        .pauseFor(1000)
+        .deleteAll()
+        .typeString('Veuillez attendre la prochaine partie...')
+        .start()
+});
+
 socket.on('game_started', function(message) {
     hideElement();
     showElement($('.started'));
@@ -167,6 +194,8 @@ socket.on('game_waiting', function(message) {
     hideElement();
     showElement($('.delay'));
     showElement($('.starting'));
+
+    resetGame();
 
     var app = document.getElementById('waiting');
 
