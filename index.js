@@ -1,6 +1,41 @@
-var http    = require('http');
-var server  = http.createServer();
-var io      = require('socket.io').listen(server);
+var http   = require('http');
+var server = http.createServer();
+var io     = require('socket.io').listen(server);
+var ws     = require('websocket').client
+
+var reconnectInterval = 5000;
+var client, ready;
+
+var idPartie = getRandomInt(50000);
+
+var intervalRetry = false;
+
+function connect()
+{
+    var W3CWebSocket = require('websocket').w3cwebsocket;
+    
+    client = new W3CWebSocket('ws://localhost:1880/shifumi');
+    ready  = false;
+
+    client.onerror = function() {
+        console.log('Connection Error');
+    };
+    
+    client.onopen = function() {
+        console.log('WebSocket Client Connected');
+
+        client.send(JSON.stringify({'qrcode': idPartie}));
+        ready = true;
+    };
+    
+    client.onclose = function() {
+        console.log('echo-protocol Client Closed');
+        setTimeout(connect, reconnectInterval);
+        ready = false;
+    };
+}
+
+connect();
 
 // Configuration
 
@@ -27,7 +62,8 @@ const gameInfo = {
 const configuration = {
     timeBeforePlaying: 10000,
     timeToChoose: 5000,
-    limitUser: 4
+    limitUser: 50,
+    limitMin: 2
 };
 
 // Functions
@@ -38,11 +74,12 @@ function startTimer()
 {
     actualTimer = configuration.timeBeforePlaying;
 
-    setInterval(() => {
+    var intervalTimer = setInterval(() => {
         if(actualTimer != 0)
         {
             actualTimer = actualTimer - 1000;
 
+            client.send(JSON.stringify({'timer': actualTimer}));
             io.emit('timer', actualTimer);
         }
     }, 1000);
@@ -50,7 +87,8 @@ function startTimer()
     setTimeout(() => {
         gameInfo.etat = 2;
         startChecker();
-    }, configuration.timeBeforePlaying);
+        clearInterval(intervalTimer);
+    }, (configuration.timeBeforePlaying + 500));
 }
 
 function addPlayer(id, socket)
@@ -65,17 +103,43 @@ function addPlayer(id, socket)
     players.push(player);
 }
 
+function restartGame()
+{
+    games   = [];
+
+    idPartie = getRandomInt(50000);
+
+    gameInfo.etat   = 0;
+    gameInfo.winner = false;
+
+    client.send(JSON.stringify({'qrcode': idPartie}));
+}
+
 function getRandomInt(max)
 {
     return Math.floor(Math.random() * Math.floor(max));
 }
 
-var intervalChecker;
+let niveau = 0;
+
+// var intervalChecker = false;
 
 function startChecker()
 {
-    intervalChecker = setInterval(function() {
+    if(players.length <= configuration.limitMin)
+    {
+        client.send('no_player');
+        
+        setTimeout(() => {
+            restartGame();
+        }, 3000);
 
+        return;
+    }
+
+    var intervalChecker = setInterval(function() {
+        
+        client.send(JSON.stringify({'players': players.length}));
         io.emit('nb_players', players.length);
 
         // Attribution entre joueurs.
@@ -100,6 +164,8 @@ function startChecker()
                     {
                         let joueur = correspond[getRandomInt(correspond.length)];
 
+                        client.send(JSON.stringify({'level': level}));
+
                         joueur.playing        = true;
                         notPlaying[i].playing = true;
 
@@ -111,16 +177,35 @@ function startChecker()
 
                         let random = getRandomInt(999999);
 
-                        var game = {
-                            start: actual,
-                            player1: player1,
-                            player2: player2,
-                            choose1: false,
-                            choose2: false,
-                            session: random,
-                            winner: false,
-                            finish: false
-                        };
+                        var game;
+
+                        if(players.length == 2)
+                        {
+                            game = {
+                                start: actual,
+                                player1: player1,
+                                player2: player2,
+                                choose1: false,
+                                choose2: false,
+                                session: random,
+                                winner: false,
+                                finish: false,
+                                final: true
+                            };
+                        }
+                        else
+                        {
+                            game = {
+                                start: actual,
+                                player1: player1,
+                                player2: player2,
+                                choose1: false,
+                                choose2: false,
+                                session: random,
+                                winner: false,
+                                finish: false
+                            };
+                        }
 
                         // On connecte les deux participants à la même session.
 
@@ -128,6 +213,8 @@ function startChecker()
                         notPlaying[i].socket.join(random);
 
                         games.push(game);
+
+                        client.send(JSON.stringify({'start': true}));
 
                         io.to(player1.id).emit('start', {game: true});
                         io.to(player2.id).emit('start', {game: true});
@@ -140,9 +227,24 @@ function startChecker()
 
                             players = [];
 
+                            let colors  = ['#9b59b6', '#3498db', '#2ecc71', '#f1c40f', '#e74c3c', '#d35400'];
+                            let randCol = colors[getRandomInt(colors.length - 1)]
+
+                            client.send(JSON.stringify({'winner': joueur.id, 'color': randCol}));
+
                             gameInfo.winner = joueur;
+                            gameInfo.etat = 0;
+
+                            setTimeout(() => {
+                                restartGame();
+                            }, 15000);
+
+                            clearInterval(intervalChecker);
+
+                            io.emit('refresh_page', true);
 
                             io.to(joueur.id).emit('winner', true);
+                            io.to(joueur.id).emit('color', randCol);
                         }
                         else
                         {
@@ -176,13 +278,14 @@ function startChecker()
 
                                 games.push(game);
 
+                                client.send(JSON.stringify({'start': true}));
                                 io.to(player2.id).emit('start', {game: true});
 
                                 console.log('just solo ok for ia');
                             }
                             else
                             {
-                                console.log('solo but waitigin friends =)');
+                                console.log('solo but waiting friends =)');
                             }
                         }
                     }
@@ -193,7 +296,45 @@ function startChecker()
         {
             if(gameInfo.winner === false)
             {
-                console.log('full draw');
+                gameInfo.etat = 0;
+
+                let findFinal = games.find(elem => elem.final === true);
+
+                let joueur1  = findFinal.player1.id;
+                let joueur2  = findFinal.player2.id;
+                
+                let colors  = ['#9b59b6', '#3498db', '#2ecc71', '#f1c40f', '#e74c3c', '#d35400'];
+
+                let rand1    = getRandomInt(colors.length - 1);
+                let randCol1 = colors[rand1];
+
+                let randCol2;
+
+                if(rand1 === 0)
+                {
+                    randCol2 = colors[(rand1 + 1)];
+                }
+                else if(rand1 === (colors.length - 1))
+                {
+                    randCol2 = colors[(rand1 - 1)];
+                }
+                else
+                {
+                    randCol2 = colors[(rand1 - 1)];
+                }
+
+
+                io.to(joueur1).emit('color', randCol1);
+                io.to(joueur2).emit('color', randCol2);
+
+                client.send(JSON.stringify({'draw': true, 'color1': randCol1, 'color2': randCol2}));
+
+                setTimeout(() => {
+                    restartGame();
+                }, 15000);
+
+                clearInterval(intervalChecker);
+                
             }
         }
 
@@ -214,17 +355,18 @@ function startChecker()
                 const session = element.session;
                 const finish  = element.finish;
 
+                var final = false;
+
+                if(element.final === true)
+                {
+                    final = true;
+                }
+
                 let checkPlayer1 = players.findIndex(elem => elem.id === player1.id);
                 let checkPlayer2 = players.findIndex(elem => elem.id === player2.id);
 
                 if((checkPlayer1 !== -1 && checkPlayer2 !== -1) || (checkPlayer2 !== -1 && player1 == 'ia'))
                 {
-
-                    if (checkPlayer2 !== -1 && player1 == 'ia')
-                    {
-                        console.log(gamesUp[i]);
-                    }
-
                     // Check time left
 
                     let dateNow = new Date();
@@ -357,15 +499,26 @@ function startChecker()
 
                                 if(winner === false)
                                 {
-                                    io.to(session).emit('draw', true);
+                                    if(final === true)
+                                    {
+                                        io.to(session).emit('win', true);
+
+                                        setTimeout(() => {
+                                            io.to(session).emit('winner');
+                                        }, 2000);
+                                    }
+                                    else
+                                    {
+                                        io.to(session).emit('draw', true);
+                                    }
 
                                     let findPlayer1 = players.findIndex(elem => elem.id === player1.id);
                                     let findPlayer2 = players.findIndex(elem => elem.id === player2.id);
 
-                                    setTimeout(() => {
-                                        io.to(player1.id).emit('next_game');
-                                        io.to(player2.id).emit('next_game');
-                                    }, 3000);
+                                    // setTimeout(() => {
+                                    //     io.to(player1.id).emit('next_game');
+                                    //     io.to(player2.id).emit('next_game');
+                                    // }, 3000);
 
                                     players.splice(findPlayer1, 1);
                                     players.splice(findPlayer2, 1);
@@ -474,6 +627,7 @@ var players = [];
 var games   = [];
 
 io.sockets.on('connection', function (socket) {
+
     socket.emit('ready', {valid: true});
 
     let max = players.length === configuration.limitUser;
@@ -495,13 +649,33 @@ io.sockets.on('connection', function (socket) {
                 socket.emit('game_started', {playing: true});
                 break;
         }
+
+        client.send(JSON.stringify({'players': players.length}));
     
         // Réception d'un message.
     
         socket.on('debug', function(message) {
             console.log(players);
-            console.log(games);
+            // console.log(games);
+            // console.log(gameInfo);
+            // console.log(client);
         })
+
+        socket.on('session', function(session) {
+            if(session !== idPartie)
+            {
+                if(session === 'jcdecaux') return;
+
+                console.log('bad session', session, socket.id);
+                
+                let findPlayer = players.findIndex(elem => elem.id === socket.id);
+
+                players.splice(findPlayer, 1);
+
+                client.send(JSON.stringify({'players': players.length}));
+                io.emit('nb_players', players.length);
+            }
+        });
 
         socket.on('choice', function(choix) {
             
@@ -534,9 +708,15 @@ io.sockets.on('connection', function (socket) {
 
         socket.on('disconnect', function () {
             var find = players.findIndex(elem => elem.id === socket.id);
-            
-            console.log(socket.id + ' has disconnect');
-            players.splice(find, 1);
+
+            if(find !== -1)
+            {
+                console.log(socket.id + ' has disconnect');
+                players.splice(find, 1);
+            }
+
+            client.send(JSON.stringify({'players': players.length}));
+
         });
     }
     else
@@ -547,5 +727,4 @@ io.sockets.on('connection', function (socket) {
     
 });
 
-
-server.listen(8080)
+server.listen(8080);
