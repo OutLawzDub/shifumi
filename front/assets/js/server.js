@@ -20,7 +20,17 @@ function resetGame()
 
 socket.on('ready', function(message) {
     hideElement($('.wait'));
+
+    socket.emit('session', $_GET('session'));
 });
+
+socket.on('color', function(color) {
+    $('body').css('background-color', color);
+})
+
+socket.on('refresh_page', function() {
+    // window.location.reload();
+})
 
 socket.on('user_left', function(message) {
     hideElement();

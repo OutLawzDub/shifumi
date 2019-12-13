@@ -2,6 +2,24 @@
 
 var choix = null;
 
+// Get
+
+function $_GET(param)
+{
+	var vars = {};
+	window.location.href.replace( location.hash, '' ).replace( 
+		/[?&]+([^=&]+)=?([^&]*)?/gi, // regexp
+		function( m, key, value ) { // callback
+			vars[key] = value !== undefined ? value : '';
+		}
+	);
+
+	if ( param ) {
+		return vars[param] ? vars[param] : null;	
+	}
+	return vars;
+}
+
 // Set my choice
 
 function myChoice(choice)
@@ -72,13 +90,16 @@ function autoRotate()
 {
     let ammount = window.orientation;
 
-    if(ammount != 0)
+    if (typeof window.orientation !== 'undefined')
     {
-        showElement($('.rotate'));
-    }
-    else if(ammount == 0 || ammount === undefined)
-    {
-        hideElement($('.rotate'));
+        if(ammount != 0)
+        {
+            showElement($('.rotate'));
+        }
+        else if(ammount == 0 || ammount === undefined)
+        {
+            hideElement($('.rotate'));
+        }
     }
 }
 

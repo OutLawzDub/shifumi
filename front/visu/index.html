@@ -1,0 +1,46 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta http-equiv="X-UA-Compatible" content="ie=edge">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/5.11.2/css/all.min.css">
+    <link rel="stylesheet" href="../assets/css/style.css">
+    <title>Document</title>
+</head>
+<body>
+    <div id="particles-js"></div>
+    <div class="delay-visu">
+        <i class="fas fa-stopwatch"></i>
+        <strong>0m 0s</strong>
+    </div>
+    <div class="players">
+        <i class="fa fa-users"></i>
+        <strong>0</strong>
+    </div>
+    <div class="bloc draw" style="display:none;">
+        <h1>Nous avons deux gagnants, des couleurs sont apparues sur vos telephones.</h1>
+    </div>
+    <div class="bloc winner-visu" style="display:none;">
+        <h1>Nous avons un gagnant, des couleurs sont apparues sur vos telephones.</h1>
+    </div>
+    <div class="bloc no_players" style="display:none;">
+        <h1>Pas assez de joueurs pour commencer.</h1>
+    </div>
+    <div class="pending">
+        <h1>Vague 1</h1>
+        <img src="loading.gif" alt="loader">
+    </div>
+    <div id="qrcode">
+        <h1>Scan moi !</h1>
+        <h2>Et tente de remporter un acces VIP</h2>
+    </div>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jquery/3.4.1/jquery.min.js"></script>
+    <script src="https://ajax.aspnetcdn.com/ajax/jquery.ui/1.12.1/jquery-ui.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/socket.io/2.3.0/socket.io.js"></script>
+    <script src="https://unpkg.com/typewriter-effect@latest/dist/core.js"></script>
+    <script src="../assets/js/qrcode.min.js"></script>
+    <script src="../assets/js/particles.min.js"></script>
+    <script src="../assets/js/visu.js"></script>
+</body>
+</html>
